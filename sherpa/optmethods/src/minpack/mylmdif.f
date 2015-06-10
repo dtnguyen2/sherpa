@@ -77,7 +77,7 @@ c
 
       subroutine mylmdif(fcn,m,n,x,fvec,ftol,xtol,gtol,maxfev,epsfcn,
      *     diag,mode,factor,nprint,info,nfev,fjac,ldfjac,ipvt,qtf,
-     +     wa1,wa2,wa3,wa4,lb,ub,fmin,covarerr)
+     +     wa1,wa2,wa3,wa4,lb,ub,fmin)
 c     *     lowtri,ifault,covarerr)
 c     **********
 c
@@ -88,7 +88,8 @@ c     subroutine mylmdif
       double precision ftol,xtol,gtol,epsfcn,factor
       double precision x(n),fvec(m),diag(n),fjac(ldfjac,n),qtf(n),
      *                 wa1(n),wa2(n),wa3(n),wa4(m)
-      double precision lb(n),ub(n),covarerr(n)
+      double precision lb(n),ub(n)
+c$$$      double precision covarerr(n)
 c      double precision lowtri(n*(n+1)/2)
       double precision fmin,enorm
       integer iflag, ii
@@ -106,9 +107,9 @@ c      double precision lowtri(n*(n+1)/2)
      *     ipvt,qtf,wa1,wa2,wa3,wa4,lb,ub)
       fmin = enorm( m, fvec )**2.0
       call covar( n, fjac, ldfjac, ipvt, ftol, wa1 )
-      do ii = 1, n
-         covarerr( ii ) = dsqrt( fjac( ii, ii ) )
-      enddo
+c$$$      do ii = 1, n
+c$$$         covarerr( ii ) = dsqrt( fjac( ii, ii ) )
+c$$$      enddo
 c      call calccovar(n,wa1,ifault,lowtri,covarerr)
       return
 c

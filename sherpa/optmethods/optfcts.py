@@ -406,7 +406,9 @@ def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
 
         return fvec, iflag
 
-    info, nfev, fval, covarerr = _minpack.mylmdif(stat_cb1, m, x, ftol, xtol, gtol, maxfev, epsfcn, factor, verbose, xmin, xmax)
+    info, nfev, fjac, fval = _minpack.mylmdif(stat_cb1, m, x, ftol, xtol, gtol, maxfev, epsfcn, factor, verbose, xmin, xmax)
+
+    covar = fjac[ 0:len(x), 0:len(x) ]
 
     if par_at_boundary( xmin, x, xmax, xtol ):
         nm_result = neldermead( fcn, x, xmin, xmax, ftol=numpy.sqrt(ftol), maxfev=maxfev-nfev, finalsimplex=2, iquad=0, verbose=0 )
@@ -458,11 +460,7 @@ def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
     status, msg = _get_saofit_msg( maxfev, info )
 
     rv = (status, x, fval)
-    print_covar_err = False
-    if print_covar_err:
-        rv += (msg, {'info': info, 'nfev': nfev, 'covarerr': covarerr})
-    else:
-        rv += (msg, {'info': info, 'nfev': nfev})
+    rv += (msg, {'info': info, 'nfev': nfev, 'covar': covar})
 
     return rv
 
