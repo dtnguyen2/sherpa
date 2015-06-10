@@ -67,7 +67,7 @@ python module _minpack
           double precision dimension(n),depend(n),intent(inout) :: wa2
         end subroutine lmpar
 !
-        subroutine mylmdif(fcn,m,n,x,fvec,ftol,xtol,gtol,maxfev,epsfcn,diag,mode,factor,nprint,info,nfev,fjac,ldfjac,ipvt,qtf,wa1,wa2,wa3,wa4,lb,ub,fval,covarerr)
+        subroutine mylmdif(fcn,m,n,x,fvec,ftol,xtol,gtol,maxfev,epsfcn,diag,mode,factor,nprint,info,nfev,fjac,ldfjac,ipvt,qtf,wa1,wa2,wa3,wa4,lb,ub,fval)
             use lmdif__user__routines
             external fcn
             integer intent(in) :: m
@@ -85,7 +85,7 @@ python module _minpack
             integer intent(in) :: nprint
             integer intent(out):: info
             integer intent(out):: nfev
-            double precision dimension(m,n),depend(m,n),intent(hide) :: fjac
+            double precision dimension(m,n),depend(m,n),intent(out) :: fjac
             integer depend(m),intent(hide) :: ldfjac=m
             integer dimension(n),depend(n),intent(hide) :: ipvt
             double precision dimension(n),depend(n),intent(hide) :: qtf
@@ -100,7 +100,7 @@ python module _minpack
 !!$            external myfdjac
 !            double precision dimension(n*(n+1)/2),depend(n),intent(hide) :: lowtri
 !           integer intent(out):: ifault
-            double precision dimension(n),depend(n),intent(out) :: covarerr
+!            double precision dimension(n),depend(n),intent(out) :: covarerr
         end subroutine mylmdif
 !
 !!$        subroutine mylm(fcn,m,n,x,fvec,fjac,ldfjac,ftol,xtol,gtol,maxfev,diag,mode,factor,nprint,info,nfev,ipvt,qtf,wa1,wa2,wa3,wa4,wa5,epsfcn,lb,ub,fval)
