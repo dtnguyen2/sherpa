@@ -500,7 +500,7 @@ class UserStat(Stat):
 
 
     def calc_stat(self, data, model, staterror=None, syserror=None,
-                  weight=None):
+                  weight=None, bkg=None):
         if not self._statfuncset:
             raise StatErr('nostat', self.name, 'calc_stat()')
-        return self.statfunc(data, model, staterror, syserror, weight)
+        return self.statfunc(data, model, staterror, syserror, weight, bkg)

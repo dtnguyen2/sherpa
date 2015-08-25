@@ -484,16 +484,17 @@ class IterFit(NoNewAttributesAfterInit):
         response_time = zeros( 2 * len_datasets )
         for index in xrange( len_datasets ):
             mydata = self.data.datasets[ index ]
-            if len( mydata.response_ids ) and len( mydata.background_ids ):
+            if hasattr( mydata, 'response_ids' ) and \
+                    hasattr( mydata, 'background_ids' ) and \
+                    len( mydata.response_ids ) and len( mydata.background_ids ):
                 bkg = mydata.get_background( mydata.background_ids[0] )
-                tmp_bkg_dep, bkg_stat_err, bkg_sys_err = \
-                    bkg.to_fit( self.stat.calc_staterror )
+                tmp_bkg_dep = bkg.get_dep( True )
                 data_size[ index ] = tmp_bkg_dep.size
                 bkg_dep = append( bkg_dep, tmp_bkg_dep )
                 response_time[ 2 * index ] = mydata.exposure
                 response_time[ 2 * index + 1 ] = bkg.exposure
-            else:
-                raise FitErr( 'no bkg file is supplied, use cstat instead' )
+            # else:
+            #     raise FitErr( 'no bkg file is supplied, use cstat instead' )
 
         return bkg_dep, data_size, response_time
 
@@ -510,8 +511,7 @@ class IterFit(NoNewAttributesAfterInit):
 
         self._dep, self._staterror, self._syserror = self.data.to_fit(
 	    self.stat.calc_staterror)
-        if type( self.stat ) is UserStat:
-            self.bkg, junk1, junk2 = self._iterfit.get_bkg_data( self._dep )
+        self.bkg, junk1, junk2 = self.get_bkg_data( self._dep )
 
         self._nfev = 0
         if outfile is not None:
@@ -531,7 +531,7 @@ class IterFit(NoNewAttributesAfterInit):
             self.model.thawedpars = pars
             model = self.data.eval_model_to_fit(self.model)
             stat = self.stat.calc_stat(
-                self._dep, model, self._staterror, self._syserror)
+                self._dep, model, self._staterror, self._syserror, bkg=self.bkg)
 
             if self._file is not None:
                 vals = ['%5e %5e' % (self._nfev, stat[0])]
@@ -953,9 +953,7 @@ class Fit(NoNewAttributesAfterInit):
         model = self.data.eval_model_to_fit(self.model)
         bkg = None
 
-        if type( self.stat ) is UserStat:
-            bkg, junk1, junk2 = self._iterfit.get_bkg_data( self._dep )
-
+        bkg, junk1, junk2 = self._iterfit.get_bkg_data( dep )
         return self.stat.calc_stat(dep, model, staterror, syserror, bkg=bkg)[0]
 
     def calc_chisqr(self):
