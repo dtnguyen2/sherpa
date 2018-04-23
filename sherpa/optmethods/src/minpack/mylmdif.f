@@ -1,5 +1,5 @@
 C
-C  Copyright (C) 2009-2011  Smithsonian Astrophysical Observatory
+C  Copyright (C) 2009-2011, 2018  Smithsonian Astrophysical Observatory
 C
 C
 C This program is free software; you can redistribute it and/or modify
@@ -89,7 +89,6 @@ c     subroutine mylmdif
       double precision x(n),fvec(m),diag(n),fjac(ldfjac,n),qtf(n),
      *                 wa1(n),wa2(n),wa3(n),wa4(m)
       double precision lb(n),ub(n)
-c$$$      double precision covarerr(n)
 c      double precision lowtri(n*(n+1)/2)
       double precision fmin,enorm
       integer iflag, ii

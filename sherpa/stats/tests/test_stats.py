@@ -353,6 +353,10 @@ class test_stats(SherpaTestCase):
             [65.215835020062741, 1.2149346471169165, 4454.4695930173866])
         }
 
+    _fit_mychi_err_results_bench = {
+        'parerr': numpy.array([4.19202861e+01, 1.63242878e-04,
+                               1.55550043e-02]) }
+
     _fit_mycashnobkg_results_bench = {
         'succeeded': 1,
         'numpoints': 1024,
@@ -476,6 +480,9 @@ class test_stats(SherpaTestCase):
         fit = Fit(self.data, self.model, MyChiWithBkg(), LevMar())
         results = fit.fit()
         self.compare_results(self._fit_mychi_results_bench, results)
+        covarerr = numpy.sqrt(results.extra_output['covar'].diagonal())
+        for a, b in zip(covarerr, self._fit_mychi_err_results_bench['parerr']):
+            self.assertEqualWithinTol(a, b, 1e-4)
 
     def test_mycash_data_and_model_donothave_bkg(self):
         data = self.bkg
@@ -504,6 +511,9 @@ class test_stats(SherpaTestCase):
         fit = Fit(self.data, self.model, MyChiNoBkg(), LevMar())
         results = fit.fit()
         self.compare_results(self._fit_mychi_results_bench, results)
+        covarerr = numpy.sqrt(results.extra_output['covar'].diagonal())
+        for a, b in zip(covarerr, self._fit_mychi_err_results_bench['parerr']):
+            self.assertEqualWithinTol(a, b, 1e-4)
 
     def test_mychi_nobkgdata_modelhasbkg(self):
         data = self.bkg
