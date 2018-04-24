@@ -407,7 +407,8 @@ def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
         return fvec, iflag
 
     info, nfev, fjac, fval = _minpack.mylmdif(stat_cb1, m, x, ftol, xtol, gtol, maxfev, epsfcn, factor, verbose, xmin, xmax)
-    covar = fjac[:len(x), :len(x)]
+    n = len(x)
+    covar = fjac[:n, :n]
     if par_at_boundary( xmin, x, xmax, xtol ):
         nm_result = neldermead( fcn, x, xmin, xmax, ftol=numpy.sqrt(ftol), maxfev=maxfev-nfev, finalsimplex=2, iquad=0, verbose=0 )
         nfev += nm_result[ 4 ][ 'nfev' ]
