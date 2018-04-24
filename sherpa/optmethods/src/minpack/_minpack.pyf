@@ -20,8 +20,6 @@ C with this program; if not, write to the Free Software Foundation, Inc.,
 C 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 C
 
-
-
 python module lmdif__user__routines 
     interface lmdif_user_interface 
         subroutine fcn(m,n,x,fvec,iflag)
@@ -103,45 +101,6 @@ python module _minpack
 !            double precision dimension(n),depend(n),intent(out) :: covarerr
         end subroutine mylmdif
 !
-!!$        subroutine mylm(fcn,m,n,x,fvec,fjac,ldfjac,ftol,xtol,gtol,maxfev,diag,mode,factor,nprint,info,nfev,ipvt,qtf,wa1,wa2,wa3,wa4,wa5,epsfcn,lb,ub,fval)
-!!$            use lmdif__user__routines
-!!$            external fcn
-!!$            integer intent(in) :: m
-!!$            integer depend(x),intent(hide) :: n=len(x)
-!!$            double precision dimension(n),intent(inout) :: x
-!!$            double precision dimension(m),intent(hide) :: fvec
-!!$            double precision dimension(n,n),depend(n,n),intent(hide) :: fjac
-!!$           integer depend(n),intent(hide) :: ldfjac=n
-!!$            double precision intent(in) :: ftol
-!!$            double precision intnt(in) :: xtol
-!!$            double precision intent(in) :: gtol
-!!$            integer intent(in) :: maxfev
-!!$            double precision dimension(n),depend(n),intent(hide) :: diag
-!!$            integer intent(hide):: mode=1
-!!$            double precision intent(in) :: factor
-!!$            integer intent(in) :: nprint
-!!$            integer intent(out):: info
-!!$            integer intent(out):: nfev
-!!$            integer dimension(n),depend(n),intent(hide) :: ipvt
-!!$            double precision dimension(n),depend(n),intent(hide) :: qtf
-!!$            double precision dimension(n),depend(n),intent(hide) :: wa1
-!!$            double precision dimension(n),depend(n),intent(hide) :: wa2
-!!$            double precision dimension(n),depend(n),intent(hide) :: wa3
-!!$            double precision dimension(m),depend(m),intent(hide) :: wa4
-!!$            double precision dimension(m),depend(m),intent(hide) :: wa5
-!!$            double precision intent(in) :: epsfcn
-!!$            double precision dimension(n),intent(in) :: lb
-!!$            double precision dimension(n),intent(in) :: ub
-!!$            double precision intent(out) :: fval
-!!$        end subroutine mylmstr
-!
-!!$        subroutine calccovar(n,wa,ifault,lowtri,covarerr)
-!!$          integer intent(in) :: n
-!!$          double precision dimension(n),intent(hide) :: wa
-!!$          integer intent(out) :: ifault
-!!$          double precision dimension(n*(n+1)/2),intent(in) :: lowtri
-!!$          double precision dimension(n),intent(out) :: covarerr
-!!$        end subroutine calccovar
         subroutine qrfac(m,n,a,lda,pivot,ipvt,lipvt,rdiag,acnorm,wa)
           integer intent(in) :: m
           integer intent(in) :: n

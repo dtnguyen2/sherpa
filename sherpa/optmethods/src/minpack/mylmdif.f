@@ -17,8 +17,6 @@ C with this program; if not, write to the Free Software Foundation, Inc.,
 C 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 C
 
-
-
       subroutine check_bounds( n, par, lb, ub, epsfcn )
       implicit none
       integer n
@@ -44,34 +42,6 @@ C
       return
 c
 c     last card of subroutine check_bounds.
-c
-      end
-
-c$$$      subroutine calccovar(n,wa,ifault,lowtri,covarerr)
-c$$$c     **********
-c$$$c
-c$$$c     subroutine calccovar
-c$$$      implicit none
-c$$$      integer n,ifault
-c$$$      double precision wa(n),lowtri(n*(n+1)/2)
-c$$$      double precision covarerr(n)
-c$$$      external symmatmult, syminv
-c$$$      integer ii,nullty
-c$$$      double precision rmax
-c$$$      
-c$$$      call syminv(lowtri,n,lowtri,wa,nullty,ifault,rmax)
-c$$$
-c$$$      if ( ifault .eq. 0 ) then
-c$$$         do ii = 1, n
-c$$$            if ( lowtri(ii*(ii+1)/2) .gt. 0.0d0 ) then
-c$$$               covarerr(ii) = dsqrt( lowtri(ii*(ii+1)/2) )
-c$$$            end if
-c$$$         end do
-c$$$      endif
-c$$$
-c$$$      return
-c
-c     last card of subroutine calccovar.
 c
       end
 
@@ -106,37 +76,8 @@ c      double precision lowtri(n*(n+1)/2)
      *     ipvt,qtf,wa1,wa2,wa3,wa4,lb,ub)
       fmin = enorm( m, fvec )**2.0
       call covar( n, fjac, ldfjac, ipvt, ftol, wa1 )
-c$$$      do ii = 1, n
-c$$$         covarerr( ii ) = dsqrt( fjac( ii, ii ) )
-c$$$      enddo
-c      call calccovar(n,wa1,ifault,lowtri,covarerr)
       return
 c
 c     last card of subroutine mylmdif.
-c
-      end
-      subroutine symmatmult(m,n,a,b,c)
-c     **********
-c
-c     subroutine symmatmult
-      implicit none
-      integer m,n
-      double precision a(m,n),b(m,n),c(n*(n+1)/2)
-      integer rr,cc,kk,ll
-      double precision tmp
-      ll = 1
-      do rr = 1, n
-         do cc = 1, rr
-            tmp = 0.0d0
-            do kk = 1, m
-               tmp = tmp + a(kk,rr)*b(kk,cc)
-            end do
-            c( ll ) = tmp
-            ll = ll + 1
-         end do
-      end do
-      return
-c
-c     last card of subroutine symmatmult.
 c
       end
