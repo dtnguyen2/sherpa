@@ -461,8 +461,7 @@ def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
         info = 3
     status, msg = _get_saofit_msg( maxfev, info )
 
-    rv = (status, x, fval)
-    rv += (msg, {'info': info, 'nfev': nfev, 'covar': covar})
+    rv = (status, x, fval, msg, {'info': info, 'nfev': nfev, 'covar': covar})
     return rv
 
 
