@@ -23,9 +23,9 @@ C
       double precision par(n), lb(n), ub(n), epsfcn
       integer ii
       double precision eps, h, dpmpar
-      
+
       eps = dsqrt( dmax1( epsfcn, dpmpar(1) ) )
-      
+
       do ii = 1, n
          if ( par(ii) .lt. lb(ii) ) then
             h = eps * dabs( par( ii ) )
@@ -61,7 +61,7 @@ c     subroutine mylmdif
       double precision lb(n),ub(n)
 c      double precision lowtri(n*(n+1)/2)
       double precision fmin,enorm
-      integer iflag, ii
+      integer iflag
       external fcn, covar
       iflag = 1
 
