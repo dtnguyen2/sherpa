@@ -27,7 +27,8 @@ from sherpa.optmethods.optfcts import *
 warning = logging.getLogger(__name__).warning
 
 
-__all__ = ('GridSearch', 'OptMethod', 'LevMar', 'MonCar', 'NelderMead')
+__all__ = ('GridSearch', 'OptMethod', 'LevMar', 'fLevMar', 'MonCar',
+           'NelderMead')
 
 
 class OptMethod(NoNewAttributesAfterInit):
@@ -336,7 +337,7 @@ class GridSearch(OptMethod):
 
 """
 
-class LevMar(OptMethod):
+class fLevMar(OptMethod):
     """Levenberg-Marquardt optimization method.
 
     The Levenberg-Marquardt method is an interface to the MINPACK
@@ -398,9 +399,12 @@ class LevMar(OptMethod):
 
     """
 
-    def __init__(self, name='levmar'):
+    def __init__(self, name='flevmar'):
         OptMethod.__init__(self, name, lmdif)
 
+class LevMar(OptMethod):
+    def __init__(self, name='levmar'):
+        OptMethod.__init__(self, name, optfcts.lmdif_cpp)
 
 class MonCar(OptMethod):
     """Monte Carlo optimzation method.

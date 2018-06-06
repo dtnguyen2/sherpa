@@ -1,4 +1,4 @@
-// 
+//
 //  Copyright (C) 2007  Smithsonian Astrophysical Observatory
 //
 //
@@ -28,8 +28,8 @@
 #include "NelderMead.hh"
 
 #include "minpack/LevMar.hh"
-static void lmdif_callback_func( int mfct, int npar, double* xpars,
-				 double* fvec, int& ierr, PyObject* py_fcn ) {
+static void lm_callback_fcn( int mfct, int npar, double* xpars,
+                             double* fvec, int& ierr, PyObject* py_fcn ) {
 
   DoubleArray pars_array;
   npy_intp dims[1];
@@ -76,45 +76,57 @@ template< typename Func >
 static PyObject* py_cpp_lmdif( PyObject* self, PyObject* args, Func func ) {
 
   PyObject* py_function=NULL;
-  DoubleArray par, lb, ub;
+  DoubleArray par, lb, ub, fjac;
   int mfct, maxnfev, nfev, info, verbose;
   double fval, ftol, xtol, gtol, epsfcn, factor;
 
-  if ( !PyArg_ParseTuple( args, (char*) "OiO&dddiddiO&O&",
+  if ( !PyArg_ParseTuple( args, (char*) "OiO&dddiddiO&O&O&",
 			  &py_function,
 			  &mfct,
 			  CONVERTME(DoubleArray), &par,
 			  &ftol, &xtol, &gtol, &maxnfev,
 			  &epsfcn, &factor, &verbose,
 			  CONVERTME(DoubleArray), &lb,
-			  CONVERTME(DoubleArray), &ub ) ) {
+			  CONVERTME(DoubleArray), &ub,
+			  CONVERTME(DoubleArray), &fjac
+                          ) ) {
     return NULL;
   }
 
   const int npar = par.get_size( );
-
+  const int mn = mfct * npar;
   std::vector<double> covarerr( npar );
+  std::vector<double> jacobian( mn );
 
   if ( npar != lb.get_size( ) ) {
     PyErr_Format( PyExc_ValueError, (char*) "len(lb)=%d != len(par)=%d",
 		  static_cast<int>( lb.get_size( ) ), npar);
     return NULL;
   }
-    
+
   if ( npar != ub.get_size( ) ) {
     PyErr_Format( PyExc_ValueError, (char*) "len(ub)=%d != len(par)=%d",
 		  static_cast<int>( ub.get_size( ) ), npar );
     return NULL;
   }
 
+  if ( mn != fjac.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*) "len(fjac)=%d != m * n =%d",
+		  static_cast<int>( ub.get_size( ) ), mn );
+    return NULL;
+  }
+
+
   try {
 
-    minpack::LevMar< Func, PyObject* > levmar( func, py_function, mfct );
+    minpack::LevMarDif< Func, PyObject*, double > levmar( func, py_function,
+                                                          mfct );
     std::vector<double> mylb( &lb[0], &lb[0] + npar );
     std::vector<double> myub( &ub[0], &ub[0] + npar );
+    sherpa::Bounds<double> bounds( mylb, myub );
     std::vector<double> mypar( &par[0], &par[0] + npar );
     info = levmar( npar, ftol, xtol, gtol, maxnfev, epsfcn, factor, verbose,
-		   mylb, myub, mypar, nfev, fval, covarerr );
+		   mypar, nfev, fval, bounds, jacobian, covarerr );
     for ( int ii = 0; ii < npar; ++ii )
       par[ ii ] = mypar[ ii ];
 
@@ -130,21 +142,21 @@ static PyObject* py_cpp_lmdif( PyObject* self, PyObject* args, Func func ) {
     return NULL;
   } catch ( ... ) {
     if ( NULL == PyErr_Occurred() )
-      PyErr_SetString( PyExc_RuntimeError, (char*)"Unknown exception caught" );
+      PyErr_SetString( PyExc_RuntimeError, (char*) "Unknown exception caught" );
     return NULL;
   }
 
   if ( info < 0 ) {
     // Make sure an exception is set
     if ( NULL == PyErr_Occurred() )
-      PyErr_SetString( PyExc_RuntimeError, (char*)"function call failed" );
+      PyErr_SetString( PyExc_RuntimeError, (char*) "function call failed" );
     return NULL;
   }
 
-  std::copy( &covarerr[0], &covarerr[0] + npar, &lb[0] );
-
+  // std::copy( &covarerr[0], &covarerr[0] + npar, &lb[0] );
+  std::copy( &jacobian[0], &jacobian[0] + ( mn ), &fjac[0] );
   return Py_BuildValue( (char*)"(NdiiN)", par.return_new_ref(), fval, nfev,
-			info, lb.return_new_ref() );
+			info, fjac.return_new_ref() );
 }
 static PyObject* py_lmdif( PyObject* self, PyObject* args ) {
 
@@ -152,7 +164,7 @@ static PyObject* py_lmdif( PyObject* self, PyObject* args ) {
   // it looks like an extra indirection but fct_ptr does the nasty
   // work so I do not have to worry about the function prototype.
   //
-  return py_cpp_lmdif( self, args, sherpa::fct_ptr( lmdif_callback_func ) );
+  return py_cpp_lmdif( self, args, sherpa::fct_ptr( lm_callback_fcn ) );
 
 }
 //*****************************************************************************
@@ -197,7 +209,7 @@ static PyObject* py_difevo_levmar( PyObject* self, PyObject* args,
 		  static_cast<int>( lb.get_size( ) ), npar);
     return NULL;
   }
-    
+
   if ( npar != ub.get_size( ) ) {
     PyErr_Format( PyExc_ValueError, (char*) "len(ub)=%d != len(par)=%d",
 		  static_cast<int>( ub.get_size( ) ), npar );
@@ -206,7 +218,7 @@ static PyObject* py_difevo_levmar( PyObject* self, PyObject* args,
 
   try {
 
-    sherpa::DifEvo< Func, PyObject*, minpack::LevMar< Func, PyObject* > >
+    sherpa::DifEvo< Func, PyObject*, minpack::LevMarDif< Func, PyObject*, double >, double >
       difevo( callback_func, py_function, mfcts );
     std::vector<double> mylb( &lb[0], &lb[0] + npar );
     std::vector<double> myub( &ub[0], &ub[0] + npar );
@@ -250,8 +262,7 @@ static PyObject* py_difevo_lm( PyObject* self, PyObject* args ) {
   // it looks like an extra indirection but fct_ptr does the nasty
   // work so I do not have to worry about the function prototype.
   //
-  return py_difevo_levmar( self, args, 
-			   sherpa::fct_ptr( lmdif_callback_func ) );
+  return py_difevo_levmar( self, args, sherpa::fct_ptr( lm_callback_fcn ) );
 
 }
 //*****************************************************************************
@@ -300,7 +311,7 @@ static void sao_callback_func( int npar, double* xpars, double& fval,
 //
 //*****************************************************************************
 template< typename Func >
-static PyObject* py_difevo_neldermead( PyObject* self, PyObject* args, 
+static PyObject* py_difevo_neldermead( PyObject* self, PyObject* args,
 				       Func func ) {
 
   PyObject* py_function=NULL;
@@ -330,7 +341,7 @@ static PyObject* py_difevo_neldermead( PyObject* self, PyObject* args,
 		  static_cast<int>( lb.get_size( ) ), npar);
     return NULL;
   }
-    
+
   if ( npar != ub.get_size( ) ) {
     PyErr_Format( PyExc_ValueError, (char*) "len(ub)=%d != len(par)=%d",
 		  static_cast<int>( ub.get_size( ) ), npar );
@@ -339,9 +350,7 @@ static PyObject* py_difevo_neldermead( PyObject* self, PyObject* args,
 
   try {
 
-
-    sherpa::DifEvo< Func, PyObject*, sherpa::NelderMead< Func, PyObject* > >
-      difevo( func, py_function );
+    sherpa::DifEvo< Func, PyObject*, sherpa::NelderMead< Func, PyObject*, double >, double > difevo( func, py_function );
     std::vector<double> mylb( &lb[0], &lb[0] + npar );
     std::vector<double> myub( &ub[0], &ub[0] + npar );
     std::vector<double> mypar( &par[0], &par[0] + npar );
@@ -382,7 +391,7 @@ static PyObject* py_difevo_nm( PyObject* self, PyObject* args ) {
   // it looks like an extra indirection but fct_ptr does the nasty
   // work so I do not have to worry about the function prototype.
   //
-  return py_difevo_neldermead( self, args, 
+  return py_difevo_neldermead( self, args,
 			       sherpa::fct_ptr( sao_callback_func ) );
 
 }
@@ -427,7 +436,7 @@ static PyObject* py_difevo( PyObject* self, PyObject* args, Func func ) {
 		  static_cast<int>( lb.get_size( ) ), npar);
     return NULL;
   }
-    
+
   if ( npar != ub.get_size( ) ) {
     PyErr_Format( PyExc_ValueError, (char*) "len(ub)=%d != len(par)=%d",
 		  static_cast<int>( ub.get_size( ) ), npar );
@@ -436,7 +445,7 @@ static PyObject* py_difevo( PyObject* self, PyObject* args, Func func ) {
 
   try {
 
-    sherpa::DifEvo< Func, PyObject*, sherpa::OptFunc< Func, PyObject* > >
+    sherpa::DifEvo< Func, PyObject*, sherpa::OptFunc< Func, PyObject*, double >,double >
       difevo( func, py_function );
     std::vector<double> mylb( &lb[0], &lb[0] + npar );
     std::vector<double> myub( &ub[0], &ub[0] + npar );
@@ -530,7 +539,7 @@ static PyObject* py_neldermead( PyObject* self, PyObject* args,
 		  static_cast<int>( lb.get_size( ) ), npar);
     return NULL;
   }
-    
+
   if ( npar != ub.get_size( ) ) {
     PyErr_Format( PyExc_ValueError, (char*)"len(ub)=%d != len(par)=%d",
 		  static_cast<int>( ub.get_size( ) ), npar );
@@ -539,8 +548,9 @@ static PyObject* py_neldermead( PyObject* self, PyObject* args,
 
   try {
 
-    sherpa::NelderMead< Func, PyObject* > nm( callback_func, py_function );
-    std::vector<int> myfinalsimplex( &finalsimplex[0], &finalsimplex[0] + 
+    sherpa::NelderMead< Func, PyObject*, double > nm( callback_func,
+                                                      py_function );
+    std::vector<int> myfinalsimplex( &finalsimplex[0], &finalsimplex[0] +
 				     finalsimplex.get_size( ) );
     std::vector<double> mystep( &step[0], &step[0] + step.get_size( ) );
     std::vector<double> mylb( &lb[0], &lb[0] + npar );

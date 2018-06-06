@@ -146,6 +146,13 @@ def _narrow_limits( myrange, xxx, debug ):
 
     return myxmin, myxmax
 
+def _par_at_boundary( low, val, high, tol ):
+    for par_min, par_val, par_max in izip( low, val, high ):
+        if sao_fcmp( par_val, par_min, tol ) == 0:
+            return True
+        if sao_fcmp( par_val, par_max, tol ) == 0:
+            return True
+    return False
 
 def _outside_limits(x, xmin, xmax):
     return (numpy.any(x < xmin) or numpy.any(x > xmax))
@@ -368,14 +375,6 @@ def grid_search( fcn, x0, xmin, xmax, num=16, sequence=None, numcores=1,
 def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
           maxfev=None, epsfcn=EPSILON, factor=100.0, verbose=0):
 
-    def par_at_boundary( low, val, high, tol ):
-        for par_min, par_val, par_max in izip( low, val, high ):
-            if sao_fcmp( par_val, par_min, tol ) == 0:
-                return True
-            if sao_fcmp( par_val, par_max, tol ) == 0:
-                return True
-        return False
-
     x, xmin, xmax = _check_args(x0, xmin, xmax)
 
     if maxfev is None:
@@ -407,12 +406,14 @@ def lmdif(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
         return fvec, iflag
 
     info, nfev, fjac, fval = _minpack.mylmdif(stat_cb1, m, x, ftol, xtol, gtol, maxfev, epsfcn, factor, verbose, xmin, xmax)
+
     n = len(x)
     if (m != n):
         covar = fjac[:n, :n]
     else:
         covar = fjac
-    if par_at_boundary( xmin, x, xmax, xtol ):
+
+    if _par_at_boundary( xmin, x, xmax, xtol ):
         nm_result = neldermead( fcn, x, xmin, xmax, ftol=numpy.sqrt(ftol), maxfev=maxfev-nfev, finalsimplex=2, iquad=0, verbose=0 )
         nfev += nm_result[ 4 ][ 'nfev' ]
         x = nm_result[ 1 ]
@@ -810,7 +811,25 @@ def lmdif_cpp(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
     def stat_cb1(x_new):
         return orig_fcn(x_new)
 
-    x, fval, nfev, info, covarerr = _saoopt.cpp_lmdif( stat_cb1, m, x, ftol, xtol, gtol, maxfev, epsfcn, factor, verbose, xmin, xmax)
+    n = len(x)
+    fjac = numpy.empty((m*n,))
+    x, fval, nfev, info, fjac = _saoopt.cpp_lmdif( stat_cb1, m, x, ftol, xtol, gtol, maxfev, epsfcn, factor, verbose, xmin, xmax, fjac )
+    fjac = numpy.reshape(numpy.ravel(fjac, order='F'), (m, n), order='F')
+    if m != n:
+        covar = fjac[:n, :n]
+    else:
+        covar = fjac
+
+    if _par_at_boundary( xmin, x, xmax, xtol ):
+        nm_result = neldermead( fcn, x, xmin, xmax, ftol=numpy.sqrt(ftol), maxfev=maxfev-nfev, finalsimplex=2, iquad=0, verbose=0 )
+        nfev += nm_result[ 4 ][ 'nfev' ]
+        x = nm_result[ 1 ]
+        fval = nm_result[ 2 ]
+##        if nm_result[ 2 ] < fval:
+##            x = nm_result[ 1 ]
+##            fval = nm_result[ 2 ]
+##            info, mynfev, fval, covarerr = _minpack.mylmdif(stat_cb1, m, x, ftol, xtol, gtol, maxfev-nfev, epsfcn, factor, verbose, xmin, xmax)
+ ##           nfev += mynfev
 
     if error:
         raise error.pop()
@@ -842,6 +861,13 @@ def lmdif_cpp(fcn, x0, xmin, xmax, ftol=EPSILON, xtol=EPSILON, gtol=EPSILON,
     key[3] = (True, key[1][1] + ' and ' + key[2][1])
     status, msg = key.get(info, (False, 'unknown status flag (%d)' % info))
 
-    rv = (status, x, fval)
-    rv += (msg, {'info': info, 'nfev': nfev, 'covarerr': covarerr })
+    if 0 == info:
+        info = 1
+    elif info >= 1 or info <= 4:
+        info = 0
+    else:
+        info = 3
+    status, msg = _get_saofit_msg( maxfev, info )
+
+    rv = (status, x, fval, msg, {'info': info, 'nfev': nfev, 'covar': covar})
     return rv
