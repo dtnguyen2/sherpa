@@ -28,7 +28,10 @@
 #include "NelderMead.hh"
 
 #include "minpack/LevMar.hh"
-static void lm_callback_fcn( int mfct, int npar, double* xpars,
+
+
+//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//
+static void lmdif_callback_fcn( int mfct, int npar, double* xpars,
                              double* fvec, int& ierr, PyObject* py_fcn ) {
 
   DoubleArray pars_array;
@@ -40,7 +43,8 @@ static void lm_callback_fcn( int mfct, int npar, double* xpars,
     return;
   }
 
-  PyObject* rv = PyObject_CallFunction( py_fcn, (char*)"N", pars_array.new_ref() );
+  PyObject* rv = PyObject_CallFunction( py_fcn, (char*)"N",
+                                        pars_array.new_ref() );
   if ( NULL == rv ) {
     ierr = EXIT_FAILURE;
     return;
@@ -153,7 +157,6 @@ static PyObject* py_cpp_lmdif( PyObject* self, PyObject* args, Func func ) {
     return NULL;
   }
 
-  // std::copy( &covarerr[0], &covarerr[0] + npar, &lb[0] );
   std::copy( &jacobian[0], &jacobian[0] + ( mn ), &fjac[0] );
   return Py_BuildValue( (char*)"(NdiiN)", par.return_new_ref(), fval, nfev,
 			info, fjac.return_new_ref() );
@@ -164,7 +167,7 @@ static PyObject* py_lmdif( PyObject* self, PyObject* args ) {
   // it looks like an extra indirection but fct_ptr does the nasty
   // work so I do not have to worry about the function prototype.
   //
-  return py_cpp_lmdif( self, args, sherpa::fct_ptr( lm_callback_fcn ) );
+  return py_cpp_lmdif( self, args, sherpa::fct_ptr( lmdif_callback_fcn ) );
 
 }
 //*****************************************************************************
@@ -172,6 +175,158 @@ static PyObject* py_lmdif( PyObject* self, PyObject* args ) {
 // py_cpp_lmdif:  Python wrapper function for C++ function lmdif
 //
 //*****************************************************************************
+//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//lmdif//
+
+//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//
+static void lmder_callback_fcn( int mfct, int npar, double* xpars,
+                                double* fvec, int& iflag, PyObject* py_fcn ) {
+
+  DoubleArray pars_array;
+  npy_intp dims[1];
+
+  dims[0] = npar;
+  if ( EXIT_SUCCESS != pars_array.create( 1, dims, xpars ) ) {
+    iflag = EXIT_FAILURE;
+    return;
+  }
+
+  PyObject* rv = PyObject_CallFunction( py_fcn, (char*)"Ni",
+                                        pars_array.new_ref(),
+                                        iflag );
+  if ( NULL == rv ) {
+    iflag = -1;
+    return;
+  }
+
+  DoubleArray vals_array;
+  int stat = vals_array.from_obj( rv );
+  Py_DECREF( rv );
+  if ( EXIT_SUCCESS != stat ) {
+    iflag = -1;
+    return;
+  }
+
+  const int num = iflag == 1 ? mfct : mfct * npar;
+
+  if ( vals_array.get_size() != num ) {
+    PyErr_SetString( PyExc_TypeError,
+		     "callback function returned wrong number of values" );
+    iflag = -1;
+    return;
+  }
+
+  std::copy( &vals_array[0], &vals_array[0] + num, fvec );
+
+  return;
+
+}
+
+//*****************************************************************************
+//
+// py_cpp_lmder:  Python wrapper function for C++ function lmder
+//
+//*****************************************************************************
+template< typename Func >
+static PyObject* py_cpp_lmder( PyObject* self, PyObject* args, Func func ) {
+
+  PyObject* py_function=NULL;
+  DoubleArray par, lb, ub, fjac;
+  int mfct, maxnfev, nfev, njev, info, rank, verbose;
+  double fval, ftol, xtol, gtol, epsfcn, factor;
+
+  if ( !PyArg_ParseTuple( args, (char*) "OiO&dddidiO&O&O&",
+			  &py_function,
+			  &mfct,
+			  CONVERTME(DoubleArray), &par,
+			  &ftol, &xtol, &gtol, &maxnfev,
+			  &factor, &verbose,
+			  CONVERTME(DoubleArray), &lb,
+			  CONVERTME(DoubleArray), &ub,
+			  CONVERTME(DoubleArray), &fjac
+                          ) ) {
+    return NULL;
+  }
+
+  const int npar = par.get_size( );
+  const int mn = mfct * npar;
+  std::vector<double> covarerr( npar );
+  std::vector<double> jacobian( mn );
+
+  if ( npar != lb.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*) "len(lb)=%d != len(par)=%d",
+		  static_cast<int>( lb.get_size( ) ), npar);
+    return NULL;
+  }
+
+  if ( npar != ub.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*) "len(ub)=%d != len(par)=%d",
+		  static_cast<int>( ub.get_size( ) ), npar );
+    return NULL;
+  }
+
+  if ( mn != fjac.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*) "len(fjac)=%d != m * n =%d",
+		  static_cast<int>( ub.get_size( ) ), mn );
+    return NULL;
+  }
+
+
+  try {
+
+    minpack::LevMarDer< Func, PyObject*, double > levmar( func, py_function,
+                                                          mfct );
+    std::vector<double> mylb( &lb[0], &lb[0] + npar );
+    std::vector<double> myub( &ub[0], &ub[0] + npar );
+    sherpa::Bounds<double> bounds( mylb, myub );
+    std::vector<double> mypar( &par[0], &par[0] + npar );
+    info = levmar( npar, ftol, xtol, gtol, maxnfev, factor, verbose,
+		   mypar, nfev, njev, fval, jacobian, bounds, rank );
+    for ( int ii = 0; ii < npar; ++ii )
+      par[ ii ] = mypar[ ii ];
+
+  } catch( sherpa::OptErr& oe ) {
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError,
+		       (char*) "The parameters are out of bounds\n" );
+    return NULL;
+
+  } catch( std::runtime_error& re ) {
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError, (char*) re.what() );
+    return NULL;
+  } catch ( ... ) {
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError, (char*) "Unknown exception caught" );
+    return NULL;
+  }
+
+  if ( info < 0 ) {
+    // Make sure an exception is set
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError, (char*) "function call failed" );
+    return NULL;
+  }
+
+  std::copy( &jacobian[0], &jacobian[0] + ( mn ), &fjac[0] );
+  return Py_BuildValue( (char*)"(NdiiiN)", par.return_new_ref(), fval, nfev,
+                        njev, info, fjac.return_new_ref() );
+}
+static PyObject* py_lmder( PyObject* self, PyObject* args ) {
+
+  //
+  // it looks like an extra indirection but fct_ptr does the nasty
+  // work so I do not have to worry about the function prototype.
+  //
+  return py_cpp_lmder( self, args, sherpa::fct_ptr( lmder_callback_fcn ) );
+
+}
+//*****************************************************************************
+//
+// py_cpp_lmder:  Python wrapper function for C++ function lmder
+//
+//*****************************************************************************
+//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//lmder//
+
 
 //*****************************************************************************
 //
@@ -262,7 +417,7 @@ static PyObject* py_difevo_lm( PyObject* self, PyObject* args ) {
   // it looks like an extra indirection but fct_ptr does the nasty
   // work so I do not have to worry about the function prototype.
   //
-  return py_difevo_levmar( self, args, sherpa::fct_ptr( lm_callback_fcn ) );
+  return py_difevo_levmar( self, args, sherpa::fct_ptr( lmdif_callback_fcn ) );
 
 }
 //*****************************************************************************
@@ -616,6 +771,7 @@ static PyMethodDef WrapperFcts[] = {
   FCTSPEC(difevo, py_difevo),
   FCTSPEC(nm_difevo, py_difevo_nm),
   FCTSPEC(lm_difevo, py_difevo_lm),
+  FCTSPEC(cpp_lmder, py_lmder),
   FCTSPEC(cpp_lmdif, py_lmdif),
   FCTSPEC(neldermead, py_nm),
   { NULL, NULL, 0, NULL }

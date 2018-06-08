@@ -131,7 +131,166 @@ namespace minpack {
     // c     **********
     //
 
-    real enorm( size_t n, const real *x) {
+
+    void print_progress( int m, int n, const real* x, const real* fvec )
+      const {
+      const real fval = pow( enorm(m, fvec), 2.0 );
+      std::cout << "f( " << x[ 0 ];
+      for ( int iii = 1; iii < n; ++iii )
+        std::cout << ", " << x[ iii ];
+      std::cout << " ) = " << fval << '\n';
+    }
+
+    // c     **********
+    // c
+    // c     subroutine covar
+    // c
+    // c     given an m by n matrix a, the problem is to determine
+    // c     the covariance matrix corresponding to a, defined as
+    // c
+    // c                    t
+    // c           inverse(a *a) .
+    // c
+    // c     this subroutine completes the solution of the problem
+    // c     if it is provided with the necessary information from the
+    // c     qr factorization, with column pivoting, of a. that is, if
+    // c     a*p = q*r, where p is a permutation matrix, q has orthogonal
+    // c     columns, and r is an upper triangular matrix with diagonal
+    // c     elements of nonincreasing magnitude, then covar expects
+    // c     the full upper triangle of r and the permutation matrix p.
+    // c     the covariance matrix is then computed as
+    // c
+    // c                      t     t
+    // c           p*inverse(r *r)*p  .
+    // c
+    // c     if a is nearly rank deficient, it may be desirable to compute
+    // c     the covariance matrix corresponding to the linearly independent
+    // c     columns of a. to define the numerical rank of a, covar uses
+    // c     the tolerance tol. if l is the largest integer such that
+    // c
+    // c           abs(r(l,l)) .gt. tol*abs(r(1,1)) ,
+    // c
+    // c     then covar computes the covariance matrix corresponding to
+    // c     the first l columns of r. for k greater than l, column
+    // c     and row ipvt(k) of the covariance matrix are set to zero.
+    // c
+    // c     the subroutine statement is
+    // c
+    // c       subroutine covar(n,r,ldr,ipvt,tol,wa)
+    // c
+    // c     where
+    // c
+    // c       n is a positive integer input variable set to the order of r.
+    // c
+    // c       r is an n by n array. on input the full upper triangle must
+    // c         contain the full upper triangle of the matrix r. on output
+    // c         r contains the square symmetric covariance matrix.
+    // c
+    // c       ldr is a positive integer input variable not less than n
+    // c         which specifies the leading dimension of the array r.
+    // c
+    // c       ipvt is an integer input array of length n which defines the
+    // c         permutation matrix p such that a*p = q*r. column j of p
+    // c         is column ipvt(j) of the identity matrix.
+    // c
+    // c       tol is a nonnegative input variable used to define the
+    // c         numerical rank of a in the manner described above.
+    // c
+    // c       wa is a work array of length n.
+    // c
+    // c     subprograms called
+    // c
+    // c       fortran-supplied ... dabs
+    // c
+    // c     argonne national laboratory. minpack project. august 1980.
+    // c     burton s. garbow, kenneth e. hillstrom, jorge j. more
+    // c
+    // c     **********
+    void covar( int n, real *r, int ldr, const int *ipvt, real tol,
+		real *wa ) {
+
+      /* Local variables */
+      int i, j, k, l, ii, jj;
+      int sing;
+      real temp, tolr;
+
+      tolr = tol * fabs(r[0]);
+
+      /*     form the inverse of r in the full upper triangle of r. */
+
+      l = -1;
+      for (k = 0; k < n; ++k) {
+        if (fabs(r[k + k * ldr]) <= tolr) {
+          break;
+        }
+        r[k + k * ldr] = 1. / r[k + k * ldr];
+        if (k > 0) {
+          for (j = 0; j < k; ++j) {
+            // coverity[copy_paste_error]
+            temp = r[k + k * ldr] * r[j + k * ldr];
+            r[j + k * ldr] = 0.;
+            for (i = 0; i <= j; ++i) {
+              r[i + k * ldr] -= temp * r[i + j * ldr];
+            }
+          }
+        }
+        l = k;
+      }
+
+      /*     form the full upper triangle of the inverse of (r transpose)*r */
+      /*     in the full upper triangle of r. */
+
+      if (l >= 0) {
+        for (k = 0; k <= l; ++k) {
+          if (k > 0) {
+            for (j = 0; j < k; ++j) {
+              temp = r[j + k * ldr];
+              for (i = 0; i <= j; ++i) {
+                r[i + j * ldr] += temp * r[i + k * ldr];
+              }
+            }
+          }
+          temp = r[k + k * ldr];
+          for (i = 0; i <= k; ++i) {
+            r[i + k * ldr] *= temp;
+          }
+        }
+      }
+
+      /*     form the full lower triangle of the covariance matrix */
+      /*     in the strict lower triangle of r and in wa. */
+
+      for (j = 0; j < n; ++j) {
+        jj = ipvt[j]-1;
+        sing = j > l;
+        for (i = 0; i <= j; ++i) {
+          if (sing) {
+            r[i + j * ldr] = 0.;
+          }
+          ii = ipvt[i]-1;
+          if (ii > jj) {
+            r[ii + jj * ldr] = r[i + j * ldr];
+          }
+          else if (ii < jj) {
+            r[jj + ii * ldr] = r[i + j * ldr];
+          }
+        }
+        wa[jj] = r[j + j * ldr];
+      }
+
+      /*     symmetrize the covariance matrix in r. */
+
+      for (j = 0; j < n; ++j) {
+        for (i = 0; i < j; ++i) {
+          r[i + j * ldr] = r[j + i * ldr];
+        }
+        r[j + j * ldr] = wa[j];
+
+      }      //     last card of subroutine covar.
+
+    } // covar
+
+    real enorm( int n, const real *x) const {
 
       // Initialized data
 /*
@@ -1365,155 +1524,6 @@ namespace minpack {
     // std::vector<real>& get_myfec( ) { return myfvec; }
 
 
-    // c     **********
-    // c
-    // c     subroutine covar
-    // c
-    // c     given an m by n matrix a, the problem is to determine
-    // c     the covariance matrix corresponding to a, defined as
-    // c
-    // c                    t
-    // c           inverse(a *a) .
-    // c
-    // c     this subroutine completes the solution of the problem
-    // c     if it is provided with the necessary information from the
-    // c     qr factorization, with column pivoting, of a. that is, if
-    // c     a*p = q*r, where p is a permutation matrix, q has orthogonal
-    // c     columns, and r is an upper triangular matrix with diagonal
-    // c     elements of nonincreasing magnitude, then covar expects
-    // c     the full upper triangle of r and the permutation matrix p.
-    // c     the covariance matrix is then computed as
-    // c
-    // c                      t     t
-    // c           p*inverse(r *r)*p  .
-    // c
-    // c     if a is nearly rank deficient, it may be desirable to compute
-    // c     the covariance matrix corresponding to the linearly independent
-    // c     columns of a. to define the numerical rank of a, covar uses
-    // c     the tolerance tol. if l is the largest integer such that
-    // c
-    // c           abs(r(l,l)) .gt. tol*abs(r(1,1)) ,
-    // c
-    // c     then covar computes the covariance matrix corresponding to
-    // c     the first l columns of r. for k greater than l, column
-    // c     and row ipvt(k) of the covariance matrix are set to zero.
-    // c
-    // c     the subroutine statement is
-    // c
-    // c       subroutine covar(n,r,ldr,ipvt,tol,wa)
-    // c
-    // c     where
-    // c
-    // c       n is a positive integer input variable set to the order of r.
-    // c
-    // c       r is an n by n array. on input the full upper triangle must
-    // c         contain the full upper triangle of the matrix r. on output
-    // c         r contains the square symmetric covariance matrix.
-    // c
-    // c       ldr is a positive integer input variable not less than n
-    // c         which specifies the leading dimension of the array r.
-    // c
-    // c       ipvt is an integer input array of length n which defines the
-    // c         permutation matrix p such that a*p = q*r. column j of p
-    // c         is column ipvt(j) of the identity matrix.
-    // c
-    // c       tol is a nonnegative input variable used to define the
-    // c         numerical rank of a in the manner described above.
-    // c
-    // c       wa is a work array of length n.
-    // c
-    // c     subprograms called
-    // c
-    // c       fortran-supplied ... dabs
-    // c
-    // c     argonne national laboratory. minpack project. august 1980.
-    // c     burton s. garbow, kenneth e. hillstrom, jorge j. more
-    // c
-    // c     **********
-    void covar( int n, real *r, int ldr, const int *ipvt, real tol,
-		real *wa ) {
-
-      /* Local variables */
-      int i, j, k, l, ii, jj;
-      int sing;
-      real temp, tolr;
-
-      tolr = tol * fabs(r[0]);
-
-      /*     form the inverse of r in the full upper triangle of r. */
-
-      l = -1;
-      for (k = 0; k < n; ++k) {
-        if (fabs(r[k + k * ldr]) <= tolr) {
-          break;
-        }
-        r[k + k * ldr] = 1. / r[k + k * ldr];
-        if (k > 0) {
-          for (j = 0; j < k; ++j) {
-            // coverity[copy_paste_error]
-            temp = r[k + k * ldr] * r[j + k * ldr];
-            r[j + k * ldr] = 0.;
-            for (i = 0; i <= j; ++i) {
-              r[i + k * ldr] -= temp * r[i + j * ldr];
-            }
-          }
-        }
-        l = k;
-      }
-
-      /*     form the full upper triangle of the inverse of (r transpose)*r */
-      /*     in the full upper triangle of r. */
-
-      if (l >= 0) {
-        for (k = 0; k <= l; ++k) {
-          if (k > 0) {
-            for (j = 0; j < k; ++j) {
-              temp = r[j + k * ldr];
-              for (i = 0; i <= j; ++i) {
-                r[i + j * ldr] += temp * r[i + k * ldr];
-              }
-            }
-          }
-          temp = r[k + k * ldr];
-          for (i = 0; i <= k; ++i) {
-            r[i + k * ldr] *= temp;
-          }
-        }
-      }
-
-      /*     form the full lower triangle of the covariance matrix */
-      /*     in the strict lower triangle of r and in wa. */
-
-      for (j = 0; j < n; ++j) {
-        jj = ipvt[j]-1;
-        sing = j > l;
-        for (i = 0; i <= j; ++i) {
-          if (sing) {
-            r[i + j * ldr] = 0.;
-          }
-          ii = ipvt[i]-1;
-          if (ii > jj) {
-            r[ii + jj * ldr] = r[i + j * ldr];
-          }
-          else if (ii < jj) {
-            r[jj + ii * ldr] = r[i + j * ldr];
-          }
-        }
-        wa[jj] = r[j + j * ldr];
-      }
-
-      /*     symmetrize the covariance matrix in r. */
-
-      for (j = 0; j < n; ++j) {
-        for (i = 0; i < j; ++i) {
-          r[i + j * ldr] = r[j + i * ldr];
-        }
-        r[j + j * ldr] = wa[j];
-
-      }      //     last card of subroutine covar.
-
-    } // covar
-
     //
     // c     **********
     // c
@@ -1907,7 +1917,8 @@ namespace minpack {
         if (nprint > 0) {
           iflag = 0;
           if ((iter - 1) % nprint == 0) {
-            fcn(m, n, x, fvec, iflag, xptr);
+            // fcn(m, n, x, fvec, iflag, xptr);
+            print_progress(m, n, x, fvec);
           }
           if (iflag < 0) {
             goto TERMINATE;
@@ -2163,7 +2174,8 @@ namespace minpack {
 	info = iflag;
       }
       if (nprint > 0) {
-        fcn(m, n, x, fvec, iflag, xptr);
+        // fcn(m, n, x, fvec, iflag, xptr);
+        print_progress(m, n, x, fvec);
       }
       return info;
       //     last card of subroutine lmdif.
@@ -2178,23 +2190,53 @@ namespace minpack {
 
   public:
 
-    LevMarDer( Func func, Data xdata, int mfct, int n )
-      : LevMar<Func, Data, real>( func, xdata ), usr_func( func ),
-        myfvec( mfct ), myfjac( mfct * n ) { }
-
-    int operator( )( int n, real ftol, real xtol,
-                     real gtol, int maxfev, real epsfcn,
+    int operator( )( int n, real ftol, real xtol, real gtol, int maxfev,
                      real factor, int nprint, std::vector<real>& x,
-                     int& nfev, int& njev, real& fmin,
-                     const std::vector<real>& low,
-                     const std::vector<real>& high,
-                     int& rank ) {
+                     int& nfev, int& njev, real& fmin, std::vector<real>& fjac,
+                     const sherpa::Bounds<real>& bounds, int& rank ) {
+
+      int m = static_cast<int>( myfvec.size( ) );
+
+      std::vector<real> diag( n ), qtf( n ), wa1( n ), wa2( n ), wa3( n );
+      std::vector<real> wa4( m );
+      std::vector<int> ipvt( n );
+
+      const int mode = 1;
+      const int ldfjac = m;
+
+      Data usrdata = sherpa::Opt<Data, real>::get_usr_data();
+      const std::vector<double>& low = bounds.get_lb();
+      const std::vector<double>& high = bounds.get_ub();
+      int info = lmder_2( usr_fcn, usrdata, m, n, &x[0],
+                          &myfvec[0], &fjac[0], ldfjac, ftol, xtol, gtol,
+                          maxfev, &diag[0], mode, factor, nprint,
+                          nfev, njev, &ipvt[0], &qtf[0], &wa1[0], &wa2[0],
+                          &wa3[0], &wa4[0], low, high);
+        double fnorm = enorm(m, &myfvec[0]);
+        covar( n, &fjac[ 0 ], ldfjac, &ipvt[0], ftol, &wa1[0] );
+        // rank = covar1( m, n, fnorm * fnorm, &fjac[0], ldfjac, &ipvt[0],
+        //                ftol, &wa1[0] );
+        fmin = std::pow( fnorm, 2.0 );
+
+        return info;
+
+    }
+
+
+    LevMarDer( Func fcn, Data xdata, int mfct )
+      : LevMar<Func, Data, real>( fcn, xdata ), usr_fcn( fcn ),
+        myfvec( mfct ) { }
+
+    int fitme( int n, real ftol, real xtol,
+               real gtol, int maxfev, real epsfcn,
+               real factor, int nprint, std::vector<real>& x,
+               int& nfev, int& njev, real& fmin, std::vector<real>& fjac,
+               const sherpa::Bounds<real>& bounds, int& rank ) {
 
       int info = 0;
 
       try {
 
-        const sherpa::Bounds<real> bounds( low, high );
         if ( sherpa::Opt<Data, real>::are_pars_outside_limits( n, x,
                                                                bounds ) )
           throw sherpa::OptErr( sherpa::OptErr::OutOfBound );
@@ -2208,16 +2250,20 @@ namespace minpack {
 	const int mode = 1;
 	const int ldfjac = m;
 
-        Func usrfunc = LevMar<Func, Data, real>::get_usr_func( );
         Data usrdata = sherpa::Opt<Data, real>::get_usr_data();
-	info = lmder( usrfunc, usrdata, m, n, &x[0], &myfvec[0], &myfjac[0],
+        const std::vector<real>& low = bounds.get_lb();
+        const std::vector<real>& high = bounds.get_ub();
+	info = lmder( usr_fcn, usrdata, m, n, &x[0], &myfvec[0], &fjac[0],
                       ldfjac, ftol, xtol, gtol, maxfev, &diag[0], mode, factor,
                       nprint, nfev, njev, &ipvt[0], &qtf[0], &wa1[ 0 ],
                       &wa2[0], &wa3[0], &wa4[0], low, high);
 
         double fnorm = enorm(m, &myfvec[0]);
-        rank = covar1( m, n, fnorm * fnorm, &myfjac[0], ldfjac, &ipvt[0],
+        rank = covar1( m, n, fnorm * fnorm, &fjac[0], ldfjac, &ipvt[0],
                        ftol, &wa1[0] );
+        fmin = std::pow( fnorm, 2.0 );
+
+        return info;
 
       } catch( sherpa::OptErr& oe ) {
 
@@ -2244,40 +2290,36 @@ namespace minpack {
 
     }
 
-    void copy_fjac( std::vector<real>& fjac ) const {
-      fjac = myfjac;
-    }
+    // real eval_func( int maxnfev, const sherpa::Bounds<real>& limits,
+    //                 int npar, std::vector<real>& par, int& nfev ) {
 
-    real eval_func( int maxnfev, const sherpa::Bounds<real>& limits,
-                    int npar, std::vector<real>& par, int& nfev ) {
+    //   if ( sherpa::Opt<Data, real>::are_pars_outside_limits( npar, par,
+    //                                                          limits ) ) {
+    //     return std::numeric_limits< real >::max( );
+    //   }
 
-      if ( sherpa::Opt<Data, real>::are_pars_outside_limits( npar, par,
-                                                             limits ) ) {
-        return std::numeric_limits< real >::max( );
-      }
+    //   ++nfev;
+    //   int ierr=EXIT_SUCCESS;
 
-      ++nfev;
-      int ierr=EXIT_SUCCESS;
+    //   const int m = static_cast<int>( myfvec.size( ) );
 
-      const int m = static_cast<int>( myfvec.size( ) );
+    //   Data usrdata = sherpa::Opt<Data, real>::get_usr_data();
+    //   usr_func( m, npar, &par[0], &myfvec[0], &myfjac[0], m, ierr, usrdata );
 
-      Data usrdata = sherpa::Opt<Data, real>::get_usr_data();
-      usr_func( m, npar, &par[0], &myfvec[0], &myfjac[0], m, ierr, usrdata );
+    //   real fval = pow( enorm( m, &myfvec[0] ), 2.0 );
+    //   if ( EXIT_SUCCESS != ierr )
+    //     throw sherpa::OptErr( sherpa::OptErr::UsrFunc );
+    //   if ( nfev >= maxnfev )
+    //     throw sherpa::OptErr( sherpa::OptErr::MaxFev );
 
-      real fval = pow( enorm( m, &myfvec[0] ), 2.0 );
-      if ( EXIT_SUCCESS != ierr )
-        throw sherpa::OptErr( sherpa::OptErr::UsrFunc );
-      if ( nfev >= maxnfev )
-        throw sherpa::OptErr( sherpa::OptErr::MaxFev );
+    //   return fval;
 
-      return fval;
-
-    }
+    // }
 
   private:
 
-    Func usr_func;
-    std::vector< real > myfvec, myfjac;
+    Func usr_fcn;
+    std::vector< real > myfvec;
 
     int covar1(int m, int n, real fsumsq, real *r, int ldr,
                const int *ipvt, real tol, real *wa) {
@@ -2634,7 +2676,8 @@ namespace minpack {
         if (nprint > 0) {
           iflag = 0;
           if ((iter - 1) % nprint == 0) {
-            iflag = fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
+            // iflag = fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
+            print_progress(m, n, x, fvec);
           }
           if (iflag < 0) {
             goto TERMINATE;
@@ -2890,7 +2933,8 @@ namespace minpack {
 	info = iflag;
       }
       if (nprint > 0) {
-	fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
+	// fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
+        print_progress(m, n, x, fvec);
       }
       return info;
 
@@ -2898,10 +2942,9 @@ namespace minpack {
 
     }
 
-    int lmder_2( Func fcnfvec, Func fcnfjac, Data xptr, int m, int n, real *x,
-                 real *fvec, real *fjac, int ldfjac, real ftol,
-                 real xtol, real gtol, int maxfev, real *diag,
-                 int mode, real factor, int nprint,
+    int lmder_2( Func fcn, Data xptr, int m, int n, real *x, real *fvec,
+                 real *fjac, int ldfjac, real ftol, real xtol, real gtol,
+                 int maxfev, real *diag, int mode, real factor, int nprint,
                  int& nfev, int& njev, int *ipvt, real *qtf,
                  real *wa1, real *wa2, real *wa3, real *wa4,
                  const std::vector<real>& low,
@@ -2957,7 +3000,8 @@ namespace minpack {
       /*     and calculate its norm. */
 
       // iflag = fcn(m, n, x, fvec, fjac, ldfjac, 1, xptr);
-      fcnfvec(m, n, x, fvec, iflag, xptr);
+      iflag = 1;
+      fcn(m, n, x, fvec, iflag, xptr);
       nfev = 1;
       if (iflag < 0) {
 	goto TERMINATE;
@@ -2976,7 +3020,8 @@ namespace minpack {
         /*        calculate the jacobian matrix. */
 
         // iflag = fcn(m, n, x, fvec, fjac, ldfjac, 2, xptr);
-        fcnfjac(m, n, x, fjac, iflag, xptr);
+        iflag = 2;
+        fcn(m, n, x, fjac, iflag, xptr);
         ++njev;
         if (iflag < 0) {
           goto TERMINATE;
@@ -2988,10 +3033,7 @@ namespace minpack {
           iflag = 0;
           if ((iter - 1) % nprint == 0) {
             // iflag = fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
-            std::cout << "f( " << x[ 0 ];
-            for ( int iii = 1; iii < n; ++iii )
-              std::cout << ", " << x[ iii ];
-            std::cout << " ) = " << std::pow(enorm( m, fvec ), 2.0) << '\n';
+            print_progress(m, n, x, fvec);
           }
           if (iflag < 0) {
             goto TERMINATE;
@@ -3119,7 +3161,9 @@ namespace minpack {
 
           /*           evaluate the function at x + p and calculate its norm. */
 
-          iflag = fcn(m, n, wa2, wa4, fjac, ldfjac, 1, xptr);
+          // iflag = fcn(m, n, wa2, wa4, fjac, ldfjac, 1, xptr);
+          iflag = 1;
+          fcn(m, n, wa2, wa4, iflag, xptr);
           ++nfev;
           if (iflag < 0) {
             goto TERMINATE;
@@ -3247,14 +3291,14 @@ namespace minpack {
 	info = iflag;
       }
       if (nprint > 0) {
-	fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
+	// fcn(m, n, x, fvec, fjac, ldfjac, 0, xptr);
+        print_progress(m, n, x, fvec);
       }
       return info;
 
       /*     last card of subroutine lmder. */
 
     }
-
 
   };
 

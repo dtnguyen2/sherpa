@@ -154,6 +154,7 @@ void tstlmder( ) {
   std::vector<double> low(n);
   std::vector<double> high(n);
   std::vector<double> x(n);
+  std::vector<double> fjac(m*n);
   for ( int ii = 0; ii < n; ++ii ) {
     low[ii] = xmin[ii];
     high[ii] = xmax[ii];
@@ -176,12 +177,11 @@ void tstlmder( ) {
   int nprint = 0;
   int nfev=0, njev=0, maxfev=400, rank;
 
-  minpack::LevMarDer< fcnLMDER, fcndata_t*, double > lm( fcn, &data, m, n );
-  lm( n, ftol, xtol, gtol, maxfev, epsfcn, factor, nprint, x, nfev, njev, fmin,
-      low, high, rank );
+  const sherpa::Bounds<double> bounds( low, high );
 
-  std::vector<double> fjac;
-  lm.copy_fjac( fjac );
+  minpack::LevMarDer< fcnLMDER, fcndata_t*, double > lm( fcn, &data, m );
+  lm.fitme( n, ftol, xtol, gtol, maxfev, epsfcn, factor, nprint, x, nfev, njev,
+            fmin, fjac, bounds, rank );
 
   double answer[n] = {0.0836609, 1.17808, 2.3 };
 
@@ -203,64 +203,66 @@ void tstlmder( ) {
 
 }
 
-void tstlmder_bounds( ) {
-  const int m = 15;
-  const int n = 3;
+// void tstlmder_bounds( ) {
+//   const int m = 15;
+//   const int n = 3;
 
-  std::vector<double> fjac( m * n );
-  double xx[n] = {1.0, 1.0, 1.0};
-  double y[m] = {1.4e-1, 1.8e-1, 2.2e-1, 2.5e-1, 2.9e-1, 3.2e-1, 3.5e-1,
-                  3.9e-1, 3.7e-1, 5.8e-1, 7.3e-1, 9.6e-1, 1.34, 2.1, 4.39};
+//   std::vector<double> fjac( m * n );
+//   double xx[n] = {1.0, 1.0, 1.0};
+//   double y[m] = {1.4e-1, 1.8e-1, 2.2e-1, 2.5e-1, 2.9e-1, 3.2e-1, 3.5e-1,
+//                   3.9e-1, 3.7e-1, 5.8e-1, 7.3e-1, 9.6e-1, 1.34, 2.1, 4.39};
 
-  double xmin[n] = {0., 0.1, 0.5};
-  double xmax[n] = {2., 1.5, 2.3};
-  std::vector<double> low(n);
-  std::vector<double> high(n);
-  std::vector<double> x(n);
-  for ( int ii = 0; ii < n; ++ii ) {
-    low[ii] = xmin[ii];
-    high[ii] = xmax[ii];
-    x[ii] = xx[ii];
-  }
+//   double xmin[n] = {0., 0.1, 0.5};
+//   double xmax[n] = {2., 1.5, 2.3};
+//   std::vector<double> low(n);
+//   std::vector<double> high(n);
+//   std::vector<double> x(n);
+//   for ( int ii = 0; ii < n; ++ii ) {
+//     low[ii] = xmin[ii];
+//     high[ii] = xmax[ii];
+//     x[ii] = xx[ii];
+//   }
 
-  fcndata_t data;
-  data.m = m;
-  data.y = y;
+//   fcndata_t data;
+//   data.m = m;
+//   data.y = y;
 
-  data.xmin = xmin;
-  data.xmax = xmax;
+//   data.xmin = xmin;
+//   data.xmax = xmax;
 
-  double ftol = std::sqrt( std::numeric_limits<double>::epsilon( ) );
-  double xtol = std::sqrt( std::numeric_limits<double>::epsilon( ) );
-  double epsfcn = ftol;
-  double factor = 100.0;
-  double gtol = 0.;
-  double fmin;
-  int nprint = 0;
-  int nfev=0, njev=0, maxfev=400, rank;
+//   double ftol = std::sqrt( std::numeric_limits<double>::epsilon( ) );
+//   double xtol = std::sqrt( std::numeric_limits<double>::epsilon( ) );
+//   double epsfcn = ftol;
+//   double factor = 100.0;
+//   double gtol = 0.;
+//   double fmin;
+//   int nprint = 0;
+//   int nfev=0, njev=0, maxfev=400, rank;
 
-  minpack::LevMarDer< fcnLMDER, fcndata_t*, double > lm( fcn, &data, m, n );
-  lm( n, ftol, xtol, gtol, maxfev, epsfcn, factor, nprint, x, nfev, njev, fmin,
-      low, high, rank );
+//   const sherpa::Bounds<double> bounds( low, high );
 
-  double answer[n] = {0.08241058, 1.133037, 2.343695};
-  for ( int ii = 0; ii < n; ++ii )
-    if ( 0 != sao_fcmp( x[ii], answer[ii], 1.0e-6 ) )
-      std::cerr << "answer (" << answer[ii ] << ") != x (" << x[ii] << ")\n";
+//   minpack::LevMarDer< fcnLMDER, fcndata_t*, double > lm( fcn, &data, m, n );
+//   lm.fitme( n, ftol, xtol, gtol, maxfev, epsfcn, factor, nprint, x, nfev, njev,
+//             fmin, bounds, rank );
 
-  double myfjac[n][n] =
-    {
-      { 0.0001531202, 0.002869941, -0.002656662 },
-      {0.002869941, 0.09480935, -0.09098995},
-      {-0.002656662, -0.09098995, 0.08778727}
-    };
+//   double answer[n] = {0.08241058, 1.133037, 2.343695};
+//   for ( int ii = 0; ii < n; ++ii )
+//     if ( 0 != sao_fcmp( x[ii], answer[ii], 1.0e-6 ) )
+//       std::cerr << "answer (" << answer[ii ] << ") != x (" << x[ii] << ")\n";
 
-  for (int i=0; i<n; ++i)
-    for (int j=0; j<n; ++j)
-      if ( 0 != sao_fcmp( fjac[ i  * m + j ], myfjac[i][j], 1.0e-6 ) )
-        std::cerr << "fjac " << fjac[ i  * m + j ] << " !=  myfjac " << myfjac[i][j] << '\n';
+//   double myfjac[n][n] =
+//     {
+//       { 0.0001531202, 0.002869941, -0.002656662 },
+//       {0.002869941, 0.09480935, -0.09098995},
+//       {-0.002656662, -0.09098995, 0.08778727}
+//     };
 
-}
+//   for (int i=0; i<n; ++i)
+//     for (int j=0; j<n; ++j)
+//       if ( 0 != sao_fcmp( fjac[ i  * m + j ], myfjac[i][j], 1.0e-6 ) )
+//         std::cerr << "fjac " << fjac[ i  * m + j ] << " !=  myfjac " << myfjac[i][j] << '\n';
+
+// }
 
 
 
@@ -275,7 +277,6 @@ int main( int argc, char* argv[] ) {
       "and it is greater then 2\n";
     return EXIT_FAILURE;
   }
-
 
   double tol = std::sqrt( std::numeric_limits< double >::epsilon() );
 
