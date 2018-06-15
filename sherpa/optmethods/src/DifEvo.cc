@@ -95,7 +95,7 @@ int main( int argc, char* argv[] ) {
 
   int c, uncopt = 1, globalopt = 1;
   while ( --argc > 0 && (*++argv)[ 0 ] == '-' )
-    while ( c = *++argv[ 0 ] )
+    while ( (c = *++argv[ 0 ]) )
       switch( c ) {
 	case 'u':
 	  uncopt = 0;

@@ -373,7 +373,7 @@ namespace minpack {
       x1max = 0.;
       x3max = 0.;
       agiant = rgiant / (real)n;
-      for (size_t i = 0; i < n; ++i) {
+      for (int i = 0; i < n; ++i) {
 	xabs = fabs(x[i]);
         if (xabs >= agiant) {
           /*              sum for large components. */
