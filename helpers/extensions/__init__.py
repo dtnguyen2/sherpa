@@ -168,7 +168,8 @@ saoopt = Extension('sherpa.optmethods._saoopt',
                         'sherpa/optmethods/src/Simplex.hh',
                         'sherpa/optmethods/src/Simplex.cc',
                         'sherpa/optmethods/src/minpack/LevMar.hh',
-                        'sherpa/optmethods/src/minpack/LevMar.cc']))
+                        'sherpa/optmethods/src/minpack/LevMar.cc',
+                        'sherpa/optmethods/src/minim.hh']))
 
 tstoptfct = Extension('sherpa.optmethods._tstoptfct',
               ['sherpa/optmethods/tests/_tstoptfct.cc'],

@@ -492,9 +492,15 @@ def minim(fcn, x0, xmin, xmax, ftol=EPSILON, maxfev=None, step=None,
             return FUNC_MAX
         return orig_fcn(x_new)
 
-    fval, var, ifault, neval = _minim.minim(x, step, maxfev, verbose, ftol,
-                                            nloop, iquad, simp, stat_cb0,
-                                            xmin, xmax)
+    # fval, var, ifault, neval = _minim.minim(x, step, maxfev, verbose, ftol,
+    #                                         nloop, iquad, simp, stat_cb0,
+    #                                         xmin, xmax)
+
+
+    init = 0
+    x, fval, neval, ifault = _saoopt.minim(verbose, maxfev, init, iquad, simp,
+                                           ftol, step, xmin, xmax, x, stat_cb0)
+
     key = {
         0: (True, 'successful termination'),
         1: (False,
