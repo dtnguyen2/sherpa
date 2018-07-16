@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2007  Smithsonian Astrophysical Observatory
+//  Copyright (C) 2007, 2018  Smithsonian Astrophysical Observatory
 //
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,8 @@
 #include <stdexcept>
 
 #include "DifEvo.hh"
+#include "minim.hh"
+#include "Opt.hh"
 #include "NelderMead.hh"
 
 #include "minpack/LevMar.hh"
@@ -232,7 +234,7 @@ static PyObject* py_cpp_lmder( PyObject* self, PyObject* args, Func func ) {
   PyObject* py_function=NULL;
   DoubleArray par, lb, ub, fjac;
   int mfct, maxnfev, nfev, njev, info, rank, verbose;
-  double fval, ftol, xtol, gtol, epsfcn, factor;
+  double fval, ftol, xtol, gtol, factor;
 
   if ( !PyArg_ParseTuple( args, (char*) "OiO&dddidiO&O&O&",
 			  &py_function,
@@ -758,7 +760,116 @@ static PyObject* py_nm( PyObject* self, PyObject* args ) {
 //
 //*****************************************************************************
 
+//??
+//*****************************************************************************
+//
+// py_minim: Python wrapper function for C++ function minim
+//
+//*****************************************************************************
+template< typename Func >
+static PyObject* py_minim( PyObject* self, PyObject* args,
+				Func callback_func ) {
 
+  PyObject* py_function=NULL;
+  DoubleArray par, step, lb, ub;
+  IntArray finalsimplex;
+  int verbose, maxnfev, nfev, iquad, ierr, initsimplex;
+  double fval, ftol, simp;
+
+  if ( !PyArg_ParseTuple( args, (char*) "iiiiddO&O&O&O&O",
+			  &verbose,
+			  &maxnfev,
+			  &initsimplex,
+                          &iquad,
+                          &simp,
+			  &ftol,
+			  CONVERTME(DoubleArray), &step,
+			  CONVERTME(DoubleArray), &lb,
+			  CONVERTME(DoubleArray), &ub,
+			  CONVERTME(DoubleArray), &par,
+			  &py_function ) ) {
+    return NULL;
+  }
+
+  const int npar = par.get_size( );
+
+  if ( npar != step.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*)"len(step)=%d != len(par)=%d",
+		  static_cast<int>( step.get_size( ) ), npar );
+    return NULL;
+  }
+
+  if ( npar != lb.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*)"len(lb)=%d != len(par)=%d",
+		  static_cast<int>( lb.get_size( ) ), npar);
+    return NULL;
+  }
+
+  if ( npar != ub.get_size( ) ) {
+    PyErr_Format( PyExc_ValueError, (char*)"len(ub)=%d != len(par)=%d",
+		  static_cast<int>( ub.get_size( ) ), npar );
+    return NULL;
+  }
+
+  try {
+
+    std::vector<double> mylb( &lb[0], &lb[0] + npar );
+    std::vector<double> myub( &ub[0], &ub[0] + npar );
+    std::vector<double> mypar( &par[0], &par[0] + npar );
+    std::vector<double> mystep( &step[0], &step[0] + step.get_size( ) );
+
+    const sherpa::Bounds<double> bounds(mylb, myub);
+    sherpa::Minim<Func, PyObject*, double> minim(callback_func, py_function );
+
+    std::vector<double> vc(npar*(npar+1)/2);
+
+    minim.minim( mypar, mystep, npar, fval, maxnfev, verbose, ftol, iquad,
+                 simp, vc, ierr, nfev, bounds);
+    for ( int ii = 0; ii < npar; ++ii )
+      par[ ii ] = mypar[ ii ];
+
+  } catch( sherpa::OptErr& oe ) {
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError,
+		       (char*) "The parameters are out of bounds\n" );
+    return NULL;
+
+  } catch( std::runtime_error& re ) {
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError, (char*) re.what() );
+    return NULL;
+  } catch ( ... ) {
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError, (char*)"Unknown exception caught" );
+    return NULL;
+  }
+
+  if ( ierr < 0 ) {
+    // Make sure an exception is set
+    if ( NULL == PyErr_Occurred() )
+      PyErr_SetString( PyExc_RuntimeError, (char*)"function call failed" );
+    return NULL;
+  }
+
+  return Py_BuildValue( (char*)"(Ndii)", par.return_new_ref(), fval, nfev,
+			ierr );
+
+}
+static PyObject* py_nm_minim( PyObject* self, PyObject* args ) {
+
+  //
+  // it looks like an extra indirection but fct_ptr does the nasty
+  // work so I do not have to worry about the function prototype.
+  //
+  return py_minim( self, args, sherpa::fct_ptr( sao_callback_func ) );
+
+}
+//*****************************************************************************
+//
+// py_minim: Python wrapper function for C++ function neldermead
+//
+//*****************************************************************************
+//??
 
 //*****************************************************************************
 //
@@ -774,6 +885,7 @@ static PyMethodDef WrapperFcts[] = {
   FCTSPEC(cpp_lmder, py_lmder),
   FCTSPEC(cpp_lmdif, py_lmdif),
   FCTSPEC(neldermead, py_nm),
+  FCTSPEC(minim, py_nm_minim),
   { NULL, NULL, 0, NULL }
 
 };
