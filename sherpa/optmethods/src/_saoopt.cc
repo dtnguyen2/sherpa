@@ -816,6 +816,16 @@ static PyObject* py_minim( PyObject* self, PyObject* args,
     for ( int ii = 0; ii < npar; ++ii )
       par[ ii ] = mypar[ ii ];
 
+    // {
+    //   int counter = 0;
+    //   for ( int ii = 0; ii < npar; ++ii )
+    //     for ( int jj = 0; jj < ii + 1; +jj ) {
+    //       covar[ii][jj] = vc[ counter ];
+    //       covar[jj][ii] = vc[ counter ];
+    //       counter += 1;
+    //     }
+    // }
+
   } catch( sherpa::OptErr& oe ) {
     if ( NULL == PyErr_Occurred() )
       PyErr_SetString( PyExc_RuntimeError,
