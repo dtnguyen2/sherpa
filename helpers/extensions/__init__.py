@@ -231,25 +231,6 @@ astro_utils = Extension('sherpa.astro.utils._utils',
               depends=(get_deps(['extension', 'utils', 'astro/utils'])+
                        ['sherpa/utils/src/gsl/fcmp.h']))
 
-####
-# FORTRAN EXTENSIONS
-####
-minpack = Extension('sherpa.optmethods._minpack',
-              ['sherpa/optmethods/src/minpack/_minpack.pyf',
-               'sherpa/optmethods/src/minpack/covar.f',
-               'sherpa/optmethods/src/minpack/lmdif.f',
-               'sherpa/optmethods/src/minpack/mylmdif.f',
-               ],
-                    )
-
-minim =  Extension('sherpa.optmethods._minim',
-              ['sherpa/optmethods/src/_minim.pyf',
-               'sherpa/optmethods/src/minim.f',
-               'sherpa/optmethods/src/syminv.f'],
-                    )
-
-fortran_exts = [minpack, minim]
-
 static_ext_modules = [
                    estmethods,
                    utils,
@@ -261,6 +242,4 @@ static_ext_modules = [
                    astro_modelfcts,
                    pileup,
                    astro_utils,
-                   minpack,
-                   minim,
                 ]
