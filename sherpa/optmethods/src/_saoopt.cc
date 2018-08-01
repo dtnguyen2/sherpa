@@ -843,7 +843,6 @@ static PyObject* py_minim( PyObject* self, PyObject* args,
       PyErr_SetString( PyExc_RuntimeError,
 		       (char*) "The parameters are out of bounds\n" );
     return NULL;
-
   } catch( std::runtime_error& re ) {
     if ( NULL == PyErr_Occurred() )
       PyErr_SetString( PyExc_RuntimeError, (char*) re.what() );

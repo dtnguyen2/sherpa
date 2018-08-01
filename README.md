@@ -112,7 +112,11 @@ Notice that section [1b](#1b-starting-from-scratch). only provides instructions 
 Anaconda-powered environment, not the full Anaconda distribution.
 
 The Sherpa 4.10.0 release - which is the latest binary release - is
+<<<<<<< HEAD
 compatible with Python 2.7 and with Python 3.5.
+=======
+compatible with Python 2.7, Python 3.5, and Python 3.6.
+>>>>>>> e2916849dc24d5ec7297e3c6b9d212e3156841f9
 
 
 ### 1a. Anaconda
@@ -205,8 +209,7 @@ You can start using Sherpa by starting a Python shell, or you can install
 `ipython` and use it as a more convenient shell. We recommend that you also install
 `ipython-notebook` and `matplotlib` so that you can use the nice `ipython` notebook
 features and the seamless integration with `matplotlib` for plotting from
-Sherpa. We also recommend that you install `astropy` for enabling FITS I/O
-(Sherpa will look for `pyfits` if `astropy` is not present).
+Sherpa. We also recommend that you install `astropy` for enabling FITS I/O.
 
     $ conda install ipython-notebook matplotlib astropy
 
@@ -222,18 +225,16 @@ The prerequisites for building from source are:
 The full test suite requires the `mock`, `pytest >=3.3.0`, and `pytest-xvfb` packages,
 which should be installed automatically if needed.
 
-The current Sherpa code base works with Python 2.7, 3.5, and 3.6 (as of the
-Sherpa 4.9.1 release); support for versions 3.3 and 3.4 is possible
-but would require community support.
+The current Sherpa code base works with Python 2.7, 3.5, and 3.6; support for
+versions 3.3 and 3.4 is possible but would require community support.
 
 It is *highly* recommended that [`matplotlib`](http://matplotlib.org/)
 be installed, as this is used to create graphical output (although the
 code can be built and used without this package), and
 [`ipython`](http://ipython.org/), which is for interactive analysis.
-Data I/O requires a `FITS` I/O library. Sherpa looks for
-[`astropy`](http://www.astropy.org) by default,
-and it falls back to [`pyfits`](http://www.stsci.edu/institute/software_hardware/pyfits) 
-if `astropy` is not installed.
+Data I/O requires a `FITS` I/O library; at present the supported
+libraries are [`astropy`](http://www.astropy.org) and
+Crates from CIAO.
 
 The instructions on how to set up the prerequisites vary from system to system,
 and even on the same system there may be multiple ways of setting up the requirements.
@@ -556,7 +557,7 @@ Release History
 
 4.8.2: 23 September 2016 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.154744.svg)](https://doi.org/10.5281/zenodo.154744)
 
-4.8.1: 15 April 2016 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.49832.svg)](http://dx.doi.org/10.5281/zenodo.49832)
+4.8.1: 15 April 2016 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.49832.svg)](https://doi.org/10.5281/zenodo.49832)
 
-4.8.0: 27 January 2016 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.45243.svg)](http://dx.doi.org/10.5281/zenodo.45243)
+4.8.0: 27 January 2016 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.45243.svg)](https://doi.org/10.5281/zenodo.45243)
 
